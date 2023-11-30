@@ -26,7 +26,7 @@ def read_id():
     ids = []
     with open('static/login.json', 'r') as file:
         data = json.load(file)
-    for i in range(data):
+    for i in range(len(data)):
         ids.append(data[i]["id"])
     return ids
 
