@@ -157,7 +157,6 @@ val = val.prefetch(4)
 
 vgg = VGG16(include_top=False)
 
-
 def build_model():
     input_layer = Input(shape=(120, 120, 3))
 

@@ -1,12 +1,12 @@
 [
     {
-        "id": 21001569,
+        "id": "21001569",
         "name": "Le Dinh Nam",
         "username": "lnam1602",
         "password": "3fb562bc0bee49dcb6925ff6ef301f42"
     },
     {
-        "id": 21001577,
+        "id": "21001577",
         "name": "Luong Mai Quynh",
         "username": "mquynh0202",
         "password": "00d5c8193df1f63a6bd09b3e4549ec43"
@@ -16,5 +16,11 @@
         "name": "Nguyen The Manh",
         "username": "manhnguyen",
         "password": "ecfd3a449d1c38d762d0ae078b7c7208"
+    },
+    {
+        "id": "21001594",
+        "name": "Vu Van Tri",
+        "username": "vantri",
+        "password": "2fe608994cf6d007150e64b2f21ff25d"
     }
 ]

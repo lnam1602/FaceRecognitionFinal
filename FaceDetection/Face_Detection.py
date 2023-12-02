@@ -9,6 +9,7 @@ facetracker = load_model("facetracker.h5")
 faces_data = []
 
 name = input("Enter your name: ")
+id = input("Enter your id")
 cap = cv2.VideoCapture(0)
 while cap.isOpened():
     _, frame = cap.read()
@@ -28,8 +29,8 @@ while cap.isOpened():
         x_add = int(sample_coords[2] * 450)
         cropped_image = frame[y : y_add, x : x_add, :]
         resized_image = cv2.resize(cropped_image, (100, 100))
-        if len(faces_data) <= 200: 
-            cv2.imwrite("dataset/User." + name + '.' + str(len(faces_data)) + ".jpg", resized_image)
+        if len(faces_data) <= 300: 
+            cv2.imwrite("dataset/User." + name + '_' + id + '.' + str(len(faces_data)) + ".jpg", resized_image)
             faces_data.append(resized_image)
         
         # Controls the main rectangle
@@ -79,7 +80,7 @@ while cap.isOpened():
 
     cv2.imshow("EyeTrack", frame)
 
-    if (cv2.waitKey(1) & 0xFF == ord("q")) or len(faces_data) >= 200:
+    if (cv2.waitKey(1) & 0xFF == ord("q")) or len(faces_data) >= 300:
         break
 cap.release()
 cv2.destroyAllWindows()

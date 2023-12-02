@@ -234,10 +234,11 @@ def add():
         with open('static/login.json', 'r') as file:
             data = json.load(file)
         for i in range(len(data)):
-            if int(id) == data[i]["id"]:
+            if id == data[i]["id"]:
                 name = data[i]["name"]
                 test = True
                 break
+        print(data)
         if not test:
             err_msg = "ID not initialized"
             return redirect(url_for("attendance", err_msg=err_msg))
@@ -262,7 +263,7 @@ def add():
                 cropped_image = frame[y : y_add, x : x_add, :]
                 resized_image = cv2.resize(cropped_image, (100, 100))
                 if len(faces_data) <= 300: 
-                    cv2.imwrite("dataset/User." + name + '_' + str(id) + '.' + str(len(faces_data)) + ".jpg", resized_image)
+                    cv2.imwrite("dataset/User." + name + '_' + id + '.' + str(len(faces_data)) + ".jpg", resized_image)
                     faces_data.append(resized_image)
                 
                 # Controls the main rectangle
@@ -325,7 +326,7 @@ def add():
             names.append(name)
 
         faces = np.asarray(faces)
-        faces = faces_data.reshape(len(faces), -1)
+        faces = faces.reshape(len(faces), -1)
 
         with open("data/names.pkl", "wb") as f:
             pickle.dump(names, f)
