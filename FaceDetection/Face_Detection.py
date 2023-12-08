@@ -9,7 +9,7 @@ facetracker = load_model("facetracker.h5")
 faces_data = []
 
 name = input("Enter your name: ")
-id = input("Enter your id")
+id = input("Enter your id: ")
 cap = cv2.VideoCapture(0)
 while cap.isOpened():
     _, frame = cap.read()
