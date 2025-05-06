@@ -121,106 +121,69 @@ def attendance():
 
 @app.route('/start', methods=['GET'])
 def start():
-    if request.method == 'GET':
-        def speak(str1):
-            speak = Dispatch(("SAPI.SpVoice"))
-            speak.Speak(str1)
+    def speak(str1):
+        speaker = Dispatch(("SAPI.SpVoice"))
+        speaker.Speak(str1)
 
-        facetracker = load_model("facetracker.h5")
+    facetracker = load_model("facetracker.h5")
 
-        with open("data/names.pkl", "rb") as w:
-            LABELS = pickle.load(w)
-        with open("data/faces_data.pkl", "rb") as f:
-            FACES = pickle.load(f)
+    with open("data/names.pkl", "rb") as w:
+        LABELS = pickle.load(w)
+    with open("data/faces_data.pkl", "rb") as f:
+        FACES = pickle.load(f)
 
-        knn = KNeighborsClassifier(n_neighbors=5)
-        knn.fit(FACES, LABELS)
+    knn = KNeighborsClassifier(n_neighbors=5)
+    knn.fit(FACES, LABELS)
 
-        COL_NAMES = ["NAME", "TIME"]
-        cap = cv2.VideoCapture(0)
-        while cap.isOpened():
-            _, frame = cap.read()
-            frame = frame[50:500, 50:500, :]
+    COL_NAMES = ["NAME", "TIME"]
+    cap = cv2.VideoCapture(0)
 
-            rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-            resized = tf.image.resize(rgb, (120, 120))
+    attendance_recorded = False
+    name_recognized = ""
 
-            yhat = facetracker.predict(np.expand_dims(resized / 255, 0))
-            sample_coords = yhat[1][0]
+    while cap.isOpened():
+        ret, frame = cap.read()
+        if not ret:
+            break
 
-            if yhat[0] > 0.5:
-                # Add face_images
-                y = int(sample_coords[1] * 450)
-                x = int(sample_coords[0] * 450)
-                y_add = int(sample_coords[3] * 450)
-                x_add = int(sample_coords[2] * 450)
-                cropped_image = frame[y : y_add, x : x_add, :]
-                resized_image = cv2.resize(cropped_image, (100, 100)).flatten().reshape(1, -1)
-                output = knn.predict(resized_image)
-                ts = time.time()
-                date = datetime.fromtimestamp(ts).strftime("%d-%m-%Y")
-                timestamp = datetime.fromtimestamp(ts).strftime("%H:%M:%S")
-                exist = os.path.isfile("Attendance/Attendance_" + date + ".csv")
+        frame = frame[50:500, 50:500, :]
+        rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        resized = tf.image.resize(rgb, (120, 120))
 
-                # Controls the main rectangle
-                cv2.rectangle(
-                    frame,
-                    tuple(np.multiply(sample_coords[:2], [450, 450]).astype(int)),
-                    tuple(np.multiply(sample_coords[2:], [450, 450]).astype(int)),
-                    (255, 0, 0),
-                    2,
-                )
+        yhat = facetracker.predict(np.expand_dims(resized / 255, 0))
+        sample_coords = yhat[1][0]
 
-                # Controls the label rectangle
-                cv2.rectangle(
-                    frame,
-                    tuple(
-                        np.add(np.multiply(sample_coords[:2], [450, 450]).astype(int), [0, -30])
-                    ),
-                    tuple(
-                        np.add(np.multiply(sample_coords[:2], [450, 450]).astype(int), [80, 0])
-                    ),
-                    (255, 0, 0),
-                    -1,
-                )
+        if yhat[0] > 0.5:
+            y = int(sample_coords[1] * 450)
+            x = int(sample_coords[0] * 450)
+            y_add = int(sample_coords[3] * 450)
+            x_add = int(sample_coords[2] * 450)
 
-                # Controls the text rendered
-                cv2.putText(
-                    frame,
-                    str(output[0].split("_")[0].split(" ")[len(output[0].split("_")[0].split(" ")) - 1]),
-                    tuple(
-                        np.add(np.multiply(sample_coords[:2], [450, 450]).astype(int), [0, -10])
-                    ),
-                    cv2.FONT_HERSHEY_SIMPLEX,
-                    1,
-                    (255, 255, 255),
-                    2,
-                    cv2.LINE_AA,
-                )
+            cropped_image = frame[y:y_add, x:x_add, :]
+            resized_image = cv2.resize(cropped_image, (100, 100)).flatten().reshape(1, -1)
+            output = knn.predict(resized_image)
 
-                attendance = [str(output[0]), str(timestamp)]
-            cv2.imshow("Frame", frame)
-            k = cv2.waitKey(1)
-            if k == ord("o"):
+            ts = time.time()
+            date = datetime.fromtimestamp(ts).strftime("%d-%m-%Y")
+            timestamp = datetime.fromtimestamp(ts).strftime("%H:%M:%S")
+            exist = os.path.isfile(f"Attendance/Attendance_{date}.csv")
+            attendance = [str(output[0]), str(timestamp)]
+
+            if not attendance_recorded:
                 speak("Attendance Success")
-                if exist:
-                    with open("Attendance/Attendance_" + date + ".csv", "+a") as csvfile:
-                        writer = csv.writer(csvfile)
-                        writer.writerow(attendance)
-                    csvfile.close()
-                else:
-                    with open("Attendance/Attendance_" + date + ".csv", "+a") as csvfile:
-                        writer = csv.writer(csvfile)
+                with open(f"Attendance/Attendance_{date}.csv", "+a") as csvfile:
+                    writer = csv.writer(csvfile)
+                    if not exist:
                         writer.writerow(COL_NAMES)
-                        writer.writerow(attendance)
-                    csvfile.close()
+                    writer.writerow(attendance)
                 mark_attendance(output[0])
+                name_recognized = output[0]
+                attendance_recorded = True
                 break
-            if k == ord("q"):
-                break
-        cap.release()
-        cv2.destroyAllWindows()
-        return redirect(url_for('attendance'))
+
+    cap.release()
+    return redirect(url_for('attendance'))
+
 
 @app.route('/add', methods=['POST'])
 def add():
@@ -231,21 +194,26 @@ def add():
         name = ""
         id = request.form.get("id")
         test = False
+
         with open('static/login.json', 'r') as file:
             data = json.load(file)
-        for i in range(len(data)):
-            if id == data[i]["id"]:
-                name = data[i]["name"]
+        for item in data:
+            if id == item["id"]:
+                name = item["name"]
                 test = True
                 break
-        print(data)
+
         if not test:
             err_msg = "ID not initialized"
             return redirect(url_for("attendance", err_msg=err_msg))
+
         facetracker = load_model("facetracker.h5")
         cap = cv2.VideoCapture(0)
+
         while cap.isOpened():
-            _, frame = cap.read()
+            ret, frame = cap.read()
+            if not ret:
+                break
             frame = frame[50:500, 50:500, :]
 
             rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
@@ -255,73 +223,30 @@ def add():
             sample_coords = yhat[1][0]
 
             if yhat[0] > 0.5:
-
                 y = int(sample_coords[1] * 450)
                 x = int(sample_coords[0] * 450)
                 y_add = int(sample_coords[3] * 450)
                 x_add = int(sample_coords[2] * 450)
-                cropped_image = frame[y : y_add, x : x_add, :]
+
+                cropped_image = frame[y:y_add, x:x_add, :]
                 resized_image = cv2.resize(cropped_image, (100, 100))
-                if len(faces_data) <= 300: 
-                    cv2.imwrite("dataset/User." + name + '_' + id + '.' + str(len(faces_data)) + ".jpg", resized_image)
+
+                if len(faces_data) <= 300:
+                    image_path = f"dataset/User.{name}_{id}.{len(faces_data)}.jpg"
+                    cv2.imwrite(image_path, resized_image)
                     faces_data.append(resized_image)
-                
-                # Controls the main rectangle
-                cv2.rectangle(
-                    frame,
-                    tuple(np.multiply(sample_coords[:2], [450, 450]).astype(int)),
-                    tuple(np.multiply(sample_coords[2:], [450, 450]).astype(int)),
-                    (255, 0, 0),
-                    2,
-                )
-                # Controls the label rectangle
-                cv2.rectangle(
-                    frame,
-                    tuple(
-                        np.add(np.multiply(sample_coords[:2], [450, 450]).astype(int), [0, -30])
-                    ),
-                    tuple(
-                        np.add(np.multiply(sample_coords[:2], [450, 450]).astype(int), [80, 0])
-                    ),
-                    (255, 0, 0),
-                    -1,
-                )
 
-                # Controls the text rendered
-                cv2.putText(
-                    frame,
-                    "face",
-                    tuple(
-                        np.add(np.multiply(sample_coords[:2], [450, 450]).astype(int), [0, -5])
-                    ),
-                    cv2.FONT_HERSHEY_SIMPLEX,
-                    1,
-                    (255, 255, 255),
-                    2,
-                    cv2.LINE_AA,
-                )
-
-                cv2.putText(
-                    frame,
-                    str(len(faces_data)),
-                    (250, 250),
-                    cv2.FONT_HERSHEY_COMPLEX,
-                    1,
-                    (255, 255, 255),
-                    1,
-                )
-
-            cv2.imshow("EyeTrack", frame)
-
-            if (cv2.waitKey(1) & 0xFF == ord("q")) or len(faces_data) >= 300:
+            if len(faces_data) >= 300:
                 break
+
         cap.release()
-        cv2.destroyAllWindows()
+
+        # Save dataset
         faces = []
         names = []
-        for image in os.listdir(os.path.join("dataset")):
-            img = cv2.imread(os.path.join("dataset", image))
-            name = image.split(".")[1]
+        for image_file in os.listdir("dataset"):
+            img = cv2.imread(os.path.join("dataset", image_file))
+            name = image_file.split(".")[1]
             faces.append(img)
             names.append(name)
 
@@ -330,10 +255,11 @@ def add():
 
         with open("data/names.pkl", "wb") as f:
             pickle.dump(names, f)
-
         with open("data/faces_data.pkl", "wb") as f:
             pickle.dump(faces, f)
+
         return redirect(url_for("attendance", err_msg=err_msg))
+
 
 if __name__ == '__main__':
     app.run(debug=True)
